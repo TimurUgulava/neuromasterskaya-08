@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>НЕЙРОМАСТЕРСКАЯ — КОНТЕКСТ ИЛИ СМЕРТЬ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NEUROMASTERSKAYA · LIVE #07 · CONTEXT OR DIE
+   Aesthetic: 1985 arcade hall. CRT phosphor. Burnt electronics.
+   ============================================================ */
+
+:root{
+  --bg:        #0A0A0F;
+  --bg-2:      #120c1a;
+  --ink:       #FFF4E0;      /* warm white, CRT phosphor */
+  --ink-dim:   #b8a88a;
+  --neon:      #FE9901;      /* cabinet glow */
+  --neon-hot:  #FFB43A;
+  --cyan:      #00F0FF;      /* atari screen cyan */
+  --magenta:   #FF2E88;      /* coin-op pink, used sparingly */
+  --grid:      #1b1530;
+  --scan:      rgba(0,0,0,0.22);
+  --glow:      1;             /* glow intensity multiplier */
+  --retro:     0.5;           /* retro-ness 0..1 */
+
+  --px: 4px; /* the "pixel" unit */
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
+body{
+  font-family:'IBM Plex Mono','VT323',ui-monospace,Menlo,monospace;
+  font-size:15px;
+  line-height:1.55;
+  min-height:100vh;
+  overflow-x:hidden;
+  image-rendering:pixelated;
+  -webkit-font-smoothing:none;
+  text-rendering:optimizeSpeed;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(254,153,1,0.08), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(0,240,255,0.06), transparent 55%),
+    var(--bg);
+}
+
+/* ---------- Pixel grid floor (the arcade hall "floor") ---------- */
+.floor-grid{
+  position:fixed; inset:auto 0 0 0; height:45vh; pointer-events:none; z-index:0;
+  background:
+    linear-gradient(to bottom, transparent 0%, rgba(0,240,255,0.12) 70%, rgba(0,240,255,0.25) 100%),
+    repeating-linear-gradient(to right,  transparent 0 79px, rgba(0,240,255,0.35) 79px 80px),
+    repeating-linear-gradient(to bottom, transparent 0 79px, rgba(0,240,255,0.35) 79px 80px);
+  transform: perspective(600px) rotateX(62deg);
+  transform-origin: top center;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 100%);
+}
+
+/* ---------- Global CRT / scanline overlay ---------- */
+.crt-overlay{
+  position:fixed; inset:0; pointer-events:none; z-index:9999;
+  mix-blend-mode:multiply;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.00) 0px,
+    rgba(255,255,255,0.00) 2px,
+    var(--scan) 2px,
+    var(--scan) 3px
+  );
+}
+.crt-overlay::after{
+  content:""; position:absolute; inset:0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+.flicker{animation: flicker 7s infinite;}
+@keyframes flicker{
+  0%,96%,100%{opacity:1}
+  97%{opacity:.85}
+  98%{opacity:.95}
+  99%{opacity:.8}
+}
+
+/* ---------- Type ---------- */
+.px-font{font-family:'Press Start 2P', monospace; letter-spacing:.02em;}
+.term{font-family:'VT323', 'IBM Plex Mono', monospace;}
+h1,h2,h3{font-family:'Press Start 2P', monospace; font-weight:400; letter-spacing:.03em; margin:0;}
+
+/* Neon glow helpers */
+.glow-neon{
+  color:var(--neon);
+  text-shadow:
+    0 0 1px #fff6d8,
+    0 0 calc(6px * var(--glow)) rgba(254,153,1,0.9),
+    0 0 calc(18px * var(--glow)) rgba(254,153,1,0.6),
+    0 0 calc(30px * var(--glow)) rgba(254,153,1,0.35);
+}
+.glow-cyan{
+  color:var(--cyan);
+  text-shadow:
+    0 0 1px #eafeff,
+    0 0 calc(6px * var(--glow)) rgba(0,240,255,0.9),
+    0 0 calc(18px * var(--glow)) rgba(0,240,255,0.5);
+}
+.glow-white{
+  color:var(--ink);
+  text-shadow: 0 0 calc(8px * var(--glow)) rgba(255,244,224,0.35), 0 0 calc(16px * var(--glow)) rgba(255,244,224,0.15);
+}
+.glow-pink{color:var(--magenta); text-shadow:0 0 8px rgba(255,46,136,0.7), 0 0 18px rgba(255,46,136,0.4);}
+
+/* ---------- Layout ---------- */
+main{
+  position:relative; z-index:1;
+  max-width:1160px; margin:0 auto;
+  padding: clamp(16px, 3vw, 28px) clamp(14px, 3vw, 24px) clamp(48px, 8vw, 80px);
+}
+
+/* ============================================================
+   TOP STRIP — COIN-OP HEADER
+   ============================================================ */
+.top-strip{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; flex-wrap:wrap;
+  padding:10px 14px;
+  border:2px solid var(--neon);
+  background:#100a04;
+  box-shadow: 0 0 0 2px #000, 0 0 22px rgba(254,153,1,0.25);
+  font-family:'Press Start 2P', monospace;
+  font-size: clamp(8px, 1.1vw, 10px);
+  color:var(--neon);
+}
+.top-strip .dots{display:inline-flex; gap:6px; align-items:center;}
+.dot{width:8px;height:8px;background:var(--neon); box-shadow:0 0 8px var(--neon); animation: blink 1.1s infinite;}
+.dot.c{background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation-delay:.4s}
+.dot.w{background:var(--ink); box-shadow:0 0 8px var(--ink); animation-delay:.7s}
+@keyframes blink{50%{opacity:.15}}
+.top-strip .right{color:var(--cyan); letter-spacing:.18em;}
+
+/* ============================================================
+   MARQUEE
+   ============================================================ */
+.marquee{
+  border:2px solid var(--neon);
+  border-top:none;
+  background: repeating-linear-gradient(45deg, #1a0d02 0 8px, #120905 8px 16px);
+  color:var(--neon-hot);
+  font-family:'Press Start 2P', monospace;
+  font-size: clamp(9px, 1.2vw, 11px);
+  overflow:hidden; white-space:nowrap;
+  padding:10px 0;
+  box-shadow: 0 0 0 2px #000;
+}
+.marquee-track{display:inline-block; padding-left:100%; animation: scrollx 34s linear infinite;}
+.marquee-track span{margin-right:60px; text-shadow:0 0 10px rgba(254,153,1,0.5);}
+.marquee-track .star{color:var(--cyan); text-shadow:0 0 10px rgba(0,240,255,0.6);}
+@keyframes scrollx{ to{ transform:translateX(-100%);} }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  margin-top:28px;
+  border:3px solid var(--cyan);
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(254,153,1,0.18), transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,240,255,0.15), transparent 60%),
+    #07060d;
+  box-shadow:
+    0 0 0 3px #000,
+    0 0 40px rgba(0,240,255,0.25),
+    inset 0 0 80px rgba(0,0,0,0.6);
+  padding: clamp(22px, 4vw, 48px) clamp(18px, 4vw, 36px) clamp(26px, 4vw, 40px);
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0,240,255,0.04) 3px 4px);
+}
+.hero .stamp{
+  display:inline-block; padding:6px 10px; font-family:'Press Start 2P',monospace; font-size:10px;
+  border:2px solid var(--cyan); color:var(--cyan); background:#001217;
+  letter-spacing:.12em;
+}
+.hero .episode{
+  display:inline-block; margin-left:10px; padding:6px 10px; font-family:'Press Start 2P',monospace; font-size:10px;
+  border:2px solid var(--neon); color:var(--neon); background:#1a0d02;
+}
+.hero .title{
+  margin-top:22px;
+  font-family:'Press Start 2P', monospace;
+  font-size: clamp(22px, 5.2vw, 44px);
+  line-height:1.15;
+  letter-spacing:.02em;
+}
+.hero .title .row{display:block;}
+.hero .subtitle{
+  margin-top:22px;
+  font-family:'VT323', monospace;
+  font-size: clamp(18px, 2.4vw, 28px);
+  line-height:1.25;
+  color:var(--ink);
+  max-width:760px;
+}
+.hero .subtitle em{color:var(--neon-hot); font-style:normal;}
+.hero .subtitle u{color:var(--cyan); text-decoration:none;}
+
+.hero-meta{
+  display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;
+  margin-top:34px;
+}
+.hero-meta .cell{
+  border:2px solid var(--neon);
+  background:#0d0906;
+  padding:12px 14px;
+  box-shadow: 0 0 0 2px #000;
+}
+.hero-meta .k{font-family:'Press Start 2P',monospace; font-size: clamp(7px, .9vw, 8px); color:var(--neon); letter-spacing:.1em;}
+.hero-meta .v{font-family:'VT323',monospace; font-size: clamp(18px, 2.2vw, 24px); color:var(--ink); line-height:1.1; margin-top:8px;}
+.hero-meta .cell.alt{border-color:var(--cyan);}
+.hero-meta .cell.alt .k{color:var(--cyan);}
+
+/* CTA buttons — arcade style */
+.cta-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:30px; align-items:center;}
+.btn-arcade{
+  --c: var(--neon);
+  position:relative;
+  display:inline-flex; align-items:center; gap:12px;
+  padding:16px 22px;
+  background:#1a0d02;
+  color:var(--c);
+  font-family:'Press Start 2P', monospace;
+  font-size:12px;
+  letter-spacing:.08em;
+  border:0;
+  cursor:pointer;
+  text-decoration:none;
+  box-shadow:
+    /* the "pressed arcade button" layered pixel border */
+    0 -4px 0 0 #000,
+    0  4px 0 0 #000,
+    -4px 0 0 0 #000,
+     4px 0 0 0 #000,
+    inset 0 0 0 2px var(--c),
+    inset 4px 4px 0 0 rgba(255,255,255,0.08),
+    inset -4px -4px 0 0 rgba(0,0,0,0.55),
+    0 0 22px rgba(254,153,1,0.35);
+  transform: translateY(0);
+  transition: transform .05s linear, box-shadow .05s linear, filter .1s;
+  text-transform:uppercase;
+}
+.btn-arcade.cyan{ --c: var(--cyan); box-shadow:
+    0 -4px 0 0 #000, 0 4px 0 0 #000, -4px 0 0 0 #000, 4px 0 0 0 #000,
+    inset 0 0 0 2px var(--c),
+    inset 4px 4px 0 0 rgba(255,255,255,0.08),
+    inset -4px -4px 0 0 rgba(0,0,0,0.55),
+    0 0 22px rgba(0,240,255,0.35);
+}
+.btn-arcade:hover{ filter:brightness(1.15);}
+.btn-arcade:active{
+  transform: translateY(3px);
+  box-shadow:
+    0 -2px 0 0 #000, 0 2px 0 0 #000, -4px 0 0 0 #000, 4px 0 0 0 #000,
+    inset 0 0 0 2px var(--c),
+    inset 6px 6px 0 0 rgba(0,0,0,0.6),
+    inset -2px -2px 0 0 rgba(255,255,255,0.05);
+}
+.btn-arcade .blip{ width:10px; height:10px; background:var(--c); box-shadow: 0 0 8px var(--c); animation:blink 1s infinite;}
+
+/* secondary, ghost */
+.btn-ghost{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:14px 18px;
+  font-family:'Press Start 2P',monospace; font-size:10px;
+  color:var(--ink); background:transparent;
+  border:2px dashed rgba(255,244,224,.35);
+  text-decoration:none; letter-spacing:.1em;
+}
+.btn-ghost:hover{color:var(--cyan); border-color:var(--cyan);}
+
+/* ============================================================
+   SIDEBAR / STATUS STRIP
+   ============================================================ */
+.status-row{
+  display:grid; grid-template-columns: 2fr 1fr; gap:14px; margin-top:22px;
+}
+.panel{
+  background:#0d0b12;
+  border:2px solid #2a2038;
+  box-shadow: 0 0 0 2px #000;
+  padding:18px 20px;
+}
+.panel .tag{
+  display:flex; align-items:center; gap:8px;
+  font-family:'Press Start 2P',monospace; font-size:9px;
+  color:var(--neon); letter-spacing:.12em;
+  border-bottom: 2px solid #2a2038;
+  padding-bottom:10px; margin-bottom:14px;
+}
+.panel .tag .pip{width:10px;height:10px;background:var(--neon);box-shadow:0 0 8px var(--neon);}
+.panel.cyan .tag{color:var(--cyan);} .panel.cyan .tag .pip{background:var(--cyan); box-shadow:0 0 8px var(--cyan);}
+
+/* ============================================================
+   ASCII divider
+   ============================================================ */
+.ascii-divide{
+  color:var(--neon);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  letter-spacing:0;
+  white-space:pre;
+  text-align:center;
+  opacity:.75;
+  margin:46px 0 20px;
+  line-height:1.1;
+  text-shadow: 0 0 8px rgba(254,153,1,.35);
+}
+
+/* ============================================================
+   GUEST BLOCK (level 2 boss)
+   ============================================================ */
+.guest{
+  display:grid; grid-template-columns: 280px 1fr; gap:26px;
+  border:2px solid var(--magenta);
+  background: #0d0712;
+  box-shadow:0 0 0 2px #000, 0 0 30px rgba(255,46,136,0.2);
+  padding:28px;
+  position:relative;
+}
+.guest::before{
+  content:"▲ BOSS LEVEL 02"; position:absolute; top:-14px; left:20px;
+  background:#0d0712; padding:2px 10px; font-family:'Press Start 2P',monospace; font-size:9px;
+  color:var(--magenta); letter-spacing:.15em;
+}
+.portrait{
+  aspect-ratio:1/1; background:#050308;
+  border:2px solid var(--magenta);
+  position:relative; overflow:hidden;
+  box-shadow: inset 0 0 40px rgba(255,46,136,0.25);
+}
+.portrait svg{width:100%;height:100%; display:block}
+.portrait .nameplate{
+  position:absolute; left:0; right:0; bottom:0;
+  background:#0b0410; border-top:2px solid var(--magenta);
+  padding:8px 10px;
+  font-family:'Press Start 2P',monospace; font-size:9px;
+  color:var(--magenta); text-align:center; letter-spacing:.1em;
+}
+.guest-info h2{font-family:'Press Start 2P',monospace; font-size: clamp(15px, 2.3vw, 20px); color:var(--neon); line-height:1.3;}
+.guest-info .role{margin-top:10px; font-family:'VT323',monospace; font-size: clamp(18px, 2vw, 22px); color:var(--ink);}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px;}
+.stat{
+  border:2px solid #2a2038; background:#07050c; padding:10px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.stat .lab{font-family:'Press Start 2P',monospace; font-size:7px; color:var(--cyan); letter-spacing:.1em;}
+.stat .val{font-family:'Press Start 2P',monospace; font-size:14px; color:var(--neon); margin-top:8px;}
+.bar{height:8px; background:#1a1228; margin-top:6px; position:relative; overflow:hidden;}
+.bar i{display:block; height:100%; background:var(--neon); box-shadow:0 0 8px var(--neon); animation: fill 1.8s ease-out forwards;}
+.bar.cy i{background:var(--cyan); box-shadow:0 0 8px var(--cyan);}
+.bar.pk i{background:var(--magenta); box-shadow:0 0 8px var(--magenta);}
+@keyframes fill{from{width:0}}
+
+.bio{margin-top:16px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-dim); line-height:1.6;}
+.bio b{color:var(--ink); font-weight:500;}
+
+/* ============================================================
+   AGENDA / "LEVELS"
+   ============================================================ */
+.levels{margin-top:36px}
+.levels h3{font-family:'Press Start 2P',monospace; font-size:14px; color:var(--cyan); margin-bottom:18px; letter-spacing:.1em;}
+.levels ol{list-style:none; padding:0; margin:0; display:grid; gap:10px;}
+.levels li{
+  display:grid; grid-template-columns: 72px 1fr auto; align-items:center; gap:18px;
+  background:#0a0811; border:2px solid #221a2e; padding:14px 16px;
+  font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--ink);
+  position:relative;
+}
+.levels li:hover{border-color:var(--neon); box-shadow:0 0 20px rgba(254,153,1,.2); cursor:default}
+.levels li .lv{font-family:'Press Start 2P',monospace; font-size:10px; color:var(--neon);}
+.levels li .score{font-family:'Press Start 2P',monospace; font-size:10px; color:var(--cyan);}
+
+/* ============================================================
+   GAME FRAME — the arcade cabinet
+   ============================================================ */
+.arcade-wrap{
+  margin-top:48px;
+  display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:22px; align-items:start;
+}
+.cabinet{
+  position:relative;
+  padding:22px;
+  background: linear-gradient(180deg, #1a0d02 0%, #0a0504 100%);
+  border:3px solid var(--neon);
+  box-shadow: 0 0 0 3px #000, 0 0 40px rgba(254,153,1,0.25);
+}
+.cabinet .bezel-title{
+  position:absolute; top:-18px; left:22px; padding:6px 14px;
+  background:#0a0504; border:3px solid var(--neon); border-bottom:0;
+  font-family:'Press Start 2P',monospace; font-size:11px; color:var(--neon);
+  letter-spacing:.14em;
+}
+.cabinet .credit{
+  position:absolute; top:-18px; right:22px; padding:6px 14px;
+  background:#0a0504; border:3px solid var(--cyan); border-bottom:0;
+  font-family:'Press Start 2P',monospace; font-size:10px; color:var(--cyan);
+}
+.screen-holder{
+  background:#000; border:2px solid #2a2038; box-shadow: inset 0 0 60px rgba(0,0,0,0.9);
+  position:relative;
+}
+#game{display:block; width:100%; height:auto; image-rendering:pixelated; background:#050307;}
+.screen-holder::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.35) 2px 3px);
+  mix-blend-mode:multiply;
+}
+.screen-holder .vignette{
+  position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+}
+
+.controls-strip{
+  margin-top:18px; display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:center;
+}
+.joystick{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:var(--cyan); font-family:'Press Start 2P',monospace; font-size:8px; letter-spacing:.1em;
+}
+.joystick .ball{
+  width:44px; height:44px; border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, #ff5, var(--neon) 50%, #6a3800 100%);
+  border:2px solid #000; box-shadow: inset -4px -6px 0 rgba(0,0,0,.4), 0 0 14px rgba(254,153,1,.5);
+}
+.joystick .stick{width:8px; height:24px; background:#333; border:2px solid #000;}
+.joystick .base{width:70px; height:12px; background:#111; border:2px solid #000; border-radius:2px;}
+.btn-coin{
+  width:64px; height:64px; border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, #ff88a8, #ff2e88 60%, #6a0c33 100%);
+  border:3px solid #000;
+  box-shadow: 0 6px 0 #000, inset -4px -6px 0 rgba(0,0,0,0.4), 0 0 18px rgba(255,46,136,0.55);
+  font-family:'Press Start 2P',monospace; font-size:8px; color:#fff; cursor:pointer;
+  transition: transform .08s, box-shadow .08s;
+}
+.btn-coin:active{transform:translateY(4px); box-shadow:0 2px 0 #000, inset 0 0 8px rgba(0,0,0,.6);}
+.redbtn{
+  width:44px;height:44px;border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, #ff9, var(--cyan) 60%, #005a63 100%);
+  border:2px solid #000;
+  box-shadow: 0 4px 0 #000, inset -3px -4px 0 rgba(0,0,0,0.4), 0 0 14px rgba(0,240,255,.55);
+}
+
+/* Game sidebar */
+.game-side{
+  background:#0a0811; border:2px solid var(--cyan); padding:18px;
+  box-shadow: 0 0 0 2px #000, 0 0 24px rgba(0,240,255,0.18);
+}
+.game-side h4{font-family:'Press Start 2P',monospace; font-size:10px; color:var(--cyan); letter-spacing:.12em; margin-bottom:12px;}
+.scoreboard{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;}
+.scoreboard .cell{background:#000; border:2px solid #2a2038; padding:8px 10px;}
+.scoreboard .k{font-family:'Press Start 2P',monospace; font-size:7px; color:var(--ink-dim);}
+.scoreboard .v{font-family:'Press Start 2P',monospace; font-size:16px; color:var(--neon); margin-top:4px;}
+.scoreboard .v.cy{color:var(--cyan);}
+.howto{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-dim); line-height:1.6;}
+.howto kbd{
+  display:inline-block; padding:2px 6px; background:#1a1228; border:1px solid #3a2a4e; color:var(--ink);
+  font-family:'Press Start 2P',monospace; font-size:8px; border-radius:2px; margin:0 2px;
+}
+.sound-toggle{
+  margin-top:14px; width:100%;
+  padding:10px; background:#000; border:2px solid var(--neon); color:var(--neon);
+  font-family:'Press Start 2P',monospace; font-size:9px; cursor:pointer; letter-spacing:.12em;
+}
+.sound-toggle.off{border-color:#3a2a4e; color:var(--ink-dim);}
+
+/* ============================================================
+   DATE / CALENDAR CTA (big finale)
+   ============================================================ */
+.finale{
+  margin-top:54px;
+  position:relative;
+  border:3px solid var(--neon);
+  padding:40px 32px;
+  background:
+    radial-gradient(ellipse at center, rgba(254,153,1,0.2), transparent 70%),
+    repeating-linear-gradient(45deg, #1a0d02 0 10px, #120a04 10px 20px);
+  box-shadow: 0 0 0 3px #000, 0 0 40px rgba(254,153,1,.3);
+  text-align:center;
+}
+.finale .hail{font-family:'Press Start 2P',monospace; font-size:11px; color:var(--cyan); letter-spacing:.2em;}
+.finale .big{
+  font-family:'Press Start 2P', monospace; font-size: clamp(24px, 5.6vw, 42px); color:var(--neon);
+  text-shadow:
+    0 0 2px #fff6d8, 0 0 12px rgba(254,153,1,.9), 0 0 30px rgba(254,153,1,.5);
+  margin-top:16px; line-height:1.25;
+}
+.finale .sub{margin-top:14px; font-family:'VT323',monospace; font-size:26px; color:var(--ink);}
+.finale .cta-big{margin-top:26px; display:inline-flex; flex-direction:column; gap:12px; align-items:center;}
+
+/* ============================================================
+   Agenda-side — Cossa + free
+   ============================================================ */
+.footer-grid{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:14px; margin-top:36px;}
+.kiosk{
+  border:2px solid #2a2038; background:#0a0811; padding:18px;
+  font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-dim); line-height:1.6;
+}
+.kiosk h5{font-family:'Press Start 2P',monospace; font-size:9px; color:var(--neon); letter-spacing:.12em; margin-bottom:10px;}
+.kiosk.cy h5{color:var(--cyan);}
+.kiosk.pk h5{color:var(--magenta);}
+.kiosk a{color:var(--cyan); text-decoration:none; border-bottom:1px dashed var(--cyan);}
+
+/* Final footer ticker */
+.coinfoot{
+  margin-top:48px; padding:18px 0; text-align:center;
+  font-family:'Press Start 2P',monospace; font-size:9px; color:var(--ink-dim); letter-spacing:.18em;
+}
+.coinfoot span{color:var(--neon)}
+.coinfoot .blink{animation: blink .8s infinite;}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1000px){
+  .arcade-wrap{grid-template-columns:1fr}
+  .guest{grid-template-columns:1fr}
+  .portrait{max-width:260px; margin:0 auto;}
+  .status-row{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width: 700px){
+  .hero-meta{grid-template-columns:1fr 1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .levels li{grid-template-columns:48px 1fr; row-gap:4px;}
+  .levels li .score{grid-column:2; justify-self:start;}
+  .stats{grid-template-columns:1fr 1fr}
+  .cta-row{gap:8px}
+  .btn-arcade{font-size:10px; padding:12px 16px}
+  .btn-ghost{font-size:9px; padding:10px 14px}
+  .ascii-divide{font-size:10px}
+  .cabinet{padding:16px}
+  .cabinet .bezel-title{font-size:9px; padding:4px 10px}
+  .cabinet .credit{font-size:8px; padding:4px 10px}
+  .finale{padding:28px 18px}
+  .portrait{max-width:220px}
+  #tweaks{width:calc(100vw - 24px); max-width:290px; right:12px; bottom:12px}
+}
+@media (max-width: 460px){
+  .hero .episode{display:block; margin-left:0; margin-top:8px}
+  .hero-meta{grid-template-columns:1fr}
+  .controls-strip{grid-template-columns:1fr; justify-items:center}
+  .top-strip{justify-content:center; text-align:center}
+  .top-strip .right{font-size:8px}
+  .scoreboard .v{font-size:14px}
+  .scoreboard .k{font-size:6px}
+  .stats{grid-template-columns:1fr}
+}
+
+/* Tweak panel */
+#tweaks{
+  position:fixed; bottom:20px; right:20px; z-index:10000;
+  background:linear-gradient(180deg, #14091f 0%, #0a0811 100%);
+  border:3px solid var(--neon);
+  box-shadow:0 0 0 3px #000, 0 8px 0 #000, 0 0 32px rgba(254,153,1,.35);
+  padding:0; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink);
+  display:none; width:290px;
+  user-select:none;
+}
+#tweaks.show{display:block}
+#tweaks .head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; background:var(--neon); color:#0a0504;
+  font-family:'Press Start 2P',monospace; font-size:10px; letter-spacing:.14em;
+  cursor:grab;
+}
+#tweaks .head:active{cursor:grabbing}
+#tweaks .head .close{
+  cursor:pointer; border:2px solid #0a0504; background:#0a0504; color:var(--neon);
+  width:20px; height:20px; line-height:16px; text-align:center;
+  font-family:'Press Start 2P',monospace; font-size:8px; padding:0;
+}
+#tweaks .body{padding:14px 16px 18px;}
+#tweaks .row{margin:0 0 14px}
+#tweaks .row:last-child{margin-bottom:0}
+#tweaks .row .lbl{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  font-family:'Press Start 2P',monospace; font-size:8px; color:var(--cyan);
+  letter-spacing:.1em; margin-bottom:6px;
+}
+#tweaks .row .lbl .val{color:var(--neon-hot); font-size:9px;}
+/* Arcade-style range sliders */
+#tweaks input[type="range"]{
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:14px; background:#000;
+  border:2px solid #3a2a4e; padding:0;
+  margin:0;
+}
+#tweaks input[type="range"]::-webkit-slider-runnable-track{
+  height:10px; background:repeating-linear-gradient(90deg, #1a1228 0 4px, #0a0811 4px 8px);
+  border:0;
+}
+#tweaks input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:14px; height:18px; margin-top:-4px;
+  background:linear-gradient(180deg, var(--neon-hot) 0%, var(--neon) 60%, #6a3800 100%);
+  border:2px solid #000; border-radius:2px; cursor:ew-resize;
+  box-shadow: 0 0 8px rgba(254,153,1,.6);
+}
+#tweaks input[type="range"]::-moz-range-track{
+  height:10px; background:repeating-linear-gradient(90deg, #1a1228 0 4px, #0a0811 4px 8px);
+  border:0;
+}
+#tweaks input[type="range"]::-moz-range-thumb{
+  width:14px; height:18px;
+  background:linear-gradient(180deg, var(--neon-hot) 0%, var(--neon) 60%, #6a3800 100%);
+  border:2px solid #000; border-radius:2px; cursor:ew-resize;
+  box-shadow: 0 0 8px rgba(254,153,1,.6);
+}
+</style>
+</head>
+<body>
+
+<div class="floor-grid"></div>
+<div class="crt-overlay flicker"></div>
+
+<main>
+
+  <!-- ========== TOP STRIP ========== -->
+  <div class="top-strip">
+    <div class="dots">
+      <span class="dot"></span><span class="dot c"></span><span class="dot w"></span>
+      <span style="margin-left:14px">НЕЙРОМАСТЕРСКАЯ · 2026</span>
+    </div>
+    <div class="right">ONLINE · CH.08 · LIVE</div>
+  </div>
+
+  <!-- ========== MARQUEE ========== -->
+  <div class="marquee">
+    <div class="marquee-track">
+      <span>◆ НЕЙРОМАСТЕРСКАЯ #08</span>
+      <span class="star">★ ГОСТЬ · ДМИТРИЙ КОТ</span>
+      <span>◆ 29 АПРЕЛЯ · 16:00 MSK</span>
+      <span class="star">★ FREE TO PLAY · БЕСПЛАТНО</span>
+      <span>◆ КОНТЕКСТ ИЛИ ПРОМПТ</span>
+      <span class="star">★ ДОБАВЛЯЙТЕ В КАЛЕНДАРЬ → PRESS START</span>
+      <span>◆ НЕЙРОМАСТЕРСКАЯ #08</span>
+      <span class="star">★ ГОСТЬ · ДМИТРИЙ КОТ</span>
+      <span>◆ 29 АПРЕЛЯ · 16:00 MSK</span>
+    </div>
+  </div>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero">
+    <span class="stamp">▶ ПРЯМОЙ ЭФИР</span>
+    <span class="episode">ЭПИЗОД · 08</span>
+
+    <h1 class="title">
+      <span class="row glow-neon">КОНТЕКСТ</span>
+      <span class="row glow-white" style="color: rgb(243, 243, 243)">НЕЛЬЗЯ</span>
+      <span class="row glow-cyan">ПРОМПТ</span>
+    </h1>
+
+    <p class="subtitle">
+      Промпты научились писать все. Даже мой кролик.<br>
+      А вот <em>контекст</em> — это уровень, где <u>оступается большинство</u>.<br>
+      <br>
+      Научимся работать с контекстом так,<br>
+      чтобы нейросеть давала не <em>«текст для всех»</em>,<br>
+      а крутой персонализированный контент.
+    </p>
+
+    <div class="hero-meta">
+      <div class="cell"><div class="k">ДАТА</div><div class="v">29 APR · WED</div></div>
+      <div class="cell"><div class="k">ВРЕМЯ</div><div class="v">16:00 MSK</div></div>
+      <div class="cell alt"><div class="k">ПРОДОЛЖИТЕЛЬНОСТЬ</div><div class="v">~ 1–1.5 H</div></div>
+      <div class="cell alt"><div class="k">СТОИМОСТЬ</div><div class="v">FREE PLAY</div></div>
+    </div>
+
+    <div class="cta-row">
+      <a class="btn-arcade" id="cal-btn" href="https://calendar.app.google/p9a4k3HtzX8vUH76A" target="_blank" rel="noopener">
+        <span class="blip"></span>
+        <span>ДОБАВИТЬ СОБЫТИЕ В КАЛЕНДАРЬ</span>
+      </a>
+      <a class="btn-ghost" href="#cabinet">▼ ПОГАМАЙТЕ, ПОКА ЖДЁТЕ</a>
+    </div>
+  </section>
+
+  <!-- ========== STATUS ROW ========== -->
+  <div class="status-row">
+    <div class="panel">
+      <div class="tag"><span class="pip"></span> ГДЕ БУДЕТ ТРАНСЛЯЦИЯ</div>
+      <div style="font-family:'VT323',monospace; font-size:22px; color:var(--ink); line-height:1.4">
+        <span class="glow-cyan">FACECAST</span> &nbsp;/&nbsp; <span class="glow-cyan">YOUTUBE</span><br>
+        <span style="color:var(--ink-dim); font-size:18px;">→ Ссылки появятся в день эфира. Лови уведомление в календаре.</span>
+      </div>
+    </div>
+    <div class="panel cyan">
+      <div class="tag"><span class="pip"></span> СКОКА СТОИТ</div>
+      <div style="font-family:'Press Start 2P',monospace; font-size:16px; color:var(--cyan); letter-spacing:.1em;">ЗИРО · 0₽ · 0$</div>
+      <div style="font-family:'VT323',monospace; font-size:20px; color:var(--ink-dim); margin-top:8px;">
+        Ни рубля, ни фунта, ни одного токена.
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DIVIDER ========== -->
+<pre class="ascii-divide">
+╔══════════════════════════ ▸ ▸ ▸  GUEST SELECT  ◂ ◂ ◂ ══════════════════════════╗
+</pre>
+
+  <!-- ========== GUEST ========== -->
+  <section class="guest">
+    <div class="portrait">
+      <img src="dmitry-kot.jpg" alt="Дмитрий Кот — пиксельный портрет" style="width:100%;height:100%;display:block;object-fit:cover;image-rendering:pixelated;">
+      <div class="nameplate">P1 · ДМИТРИЙ КОТ</div>
+    </div>
+
+    <div class="guest-info">
+      <h2 class="glow-neon">ДМИТРИЙ КОТ</h2>
+      <div class="role">человек-легенда русскоязычного копирайтинга</div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="lab">КОПИРАЙТИНГ</div>
+          <div class="val">MAX</div>
+          <div class="bar"><i style="width:98%"></i></div>
+        </div>
+        <div class="stat">
+          <div class="lab">АНТИ-ВОДА</div>
+          <div class="val">99</div>
+          <div class="bar cy"><i style="width:94%"></i></div>
+        </div>
+        <div class="stat">
+          <div class="lab">DIGITAL TOP-40</div>
+          <div class="val">★★★★</div>
+          <div class="bar pk"><i style="width:86%"></i></div>
+        </div>
+      </div>
+
+      <p class="bio">
+        <b>Автор</b> книги «Копирайтинг: как не съесть собаку». <b>Директор</b> Агентства
+        продающих текстов. <b>Топ-40</b> ключевых персон российского digital-маркетинга.
+        Если вы хоть раз гуглили «как писать продающие тексты» — вы точно на него натыкались.
+      </p>
+      <p class="bio" style="margin-top:8px">
+        Ведёт канал <a href="https://t.me/marketingforever" target="_blank" rel="noopener" style="color:var(--cyan); border-bottom:1px dashed var(--cyan); text-decoration:none;">Маркетинг Продающий</a> —
+        фундаментальная база по текстам и маркетингу. Там надо быть.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== AGENDA / LEVELS ========== -->
+  <section class="levels">
+    <h3>▷ LEVEL LIST · ЧТО РАЗБЕРЁМ</h3>
+    <ol>
+      <li><span class="lv">LV 01</span><span>Почему <b>«женщины 25–45, средний доход»</b> — это <span class="glow-neon">не описание ЦА</span>. И что использовать вместо.</span><span class="score">+ 500</span></li>
+      <li><span class="lv">LV 02</span><span>Какие <b>контексты ЦА</b> существуют и как их задавать, чтобы нейросеть понимала с первого раза.</span><span class="score">+ 700</span></li>
+      <li><span class="lv">LV 03</span><span>Как через контекст <b>управлять стилем, тоном и форматом</b> — без танцев с бубном.</span><span class="score">+ 900</span></li>
+      <li><span class="lv">LV 04</span><span>Как <b>убрать воду</b> и общие рассуждения из текстов, которые генерит нейросеть.</span><span class="score">+ 1200</span></li>
+      <li><span class="lv">BOSS</span><span>Живые примеры — для маркетологов, копирайтеров и всех, кто пишет тексты.</span><span class="score">+ ∞</span></li>
+    </ol>
+  </section>
+
+  <!-- ========== DIVIDER ========== -->
+<pre class="ascii-divide">
+╚═══════════════════════ ▸ ▸ ▸  ИГРУЛИНА  ◂ ◂ ◂ ═══════════════════╝
+</pre>
+
+  <!-- ========== ARCADE MINI-GAME ========== -->
+  <div class="arcade-wrap" id="cabinet">
+    <div class="cabinet">
+      <div class="bezel-title">★ ЛЕТАЙ КАК БАБоЧКА ★</div>
+      <div class="credit">КРЕДИТ · 01</div>
+
+      <div class="screen-holder">
+        <canvas id="game" width="480" height="360"></canvas>
+        <div class="vignette"></div>
+      </div>
+
+      <div class="controls-strip">
+        <div class="joystick">
+          <div class="ball"></div>
+          <div class="stick"></div>
+          <div class="base"></div>
+          <span>◀ ДЖОЙСТИК ▶</span>
+        </div>
+        <button class="btn-coin" id="coin-btn" title="Вставь монету">ЖМИ<br>СЮДА</button>
+        <div class="joystick">
+          <div class="redbtn"></div>
+          <div style="height:30px"></div>
+          <span>ПАУЗА</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="game-side">
+      <h4>▶ ЖАЛЬ КАК ПЧЕЛА</h4>
+      <div class="scoreboard">
+        <div class="cell"><div class="k">ОЧКИ</div><div class="v" id="ui-score">0</div></div>
+        <div class="cell"><div class="k">РЕКОРД</div><div class="v cy" id="ui-hi">0</div></div>
+        <div class="cell"><div class="k">ЖИЗНИ</div><div class="v" id="ui-lives">♥ ♥ ♥</div></div>
+        <div class="cell"><div class="k">УРОВЕНЬ</div><div class="v cy" id="ui-level">1</div></div>
+      </div>
+      <div class="howto">
+        <p style="margin:0 0 8px; color:var(--ink)">Лови <span class="glow-cyan">КОНТЕКСТ</span>. Уворачивайся от <span class="glow-pink">ВОДЫ</span>.</p>
+        <p style="margin:0 0 8px">Управление: <kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd>/<kbd>D</kbd>. <kbd>SPACE</kbd> — пауза.</p>
+        <p style="margin:0;">На мобильном — тапни по экрану слева/справа.</p>
+      </div>
+      <button class="sound-toggle" id="sound-toggle">♪ ЗВУК : ВКЛ</button>
+    </aside>
+  </div>
+
+  <!-- ========== FINALE / CTA ========== -->
+  <section class="finale" style="margin-top:48px">
+    <div class="hail">▲ ▲ ▲ &nbsp; НЕ ПРОПУСТИ! &nbsp; ▲ ▲ ▲</div>
+    <div class="big">
+      29 · АПР · 16:00<br>
+      <span class="glow-cyan" style="font-size:20px">MOSCOW TIME</span>
+    </div>
+    <div class="sub">Трансляция в <span class="glow-cyan">FACECAST</span> и <span class="glow-cyan">YOUTUBE</span>. Ссылки — в день эфира.</div>
+    <div class="cta-big">
+      <a class="btn-arcade" href="https://calendar.app.google/p9a4k3HtzX8vUH76A" target="_blank" rel="noopener" style="font-size:14px; padding:20px 28px">
+        <span class="blip"></span>
+        <span>▶ ДОБАВИТЬ В КАЛЕНДАРЬ</span>
+      </a>
+      <div style="font-family:'VT323',monospace; font-size:22px; color:var(--ink-dim)">
+        Один клик — и напоминалка сама постучится.
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER GRID ========== -->
+  <section class="footer-grid">
+    <div class="kiosk">
+      <h5>▸ ТЕМА ЭФИРА</h5>
+      Как задавать контекст в работе с нейросетью — и зачем это нужно.
+      Формулы, шаблоны, фреймворки — этого навалом. Проблема не в промпте,
+      проблема в контексте. Вот его и закрываем.
+    </div>
+    <div class="kiosk cy">
+      <h5>▸ ДЛЯ КОГО</h5>
+      Маркетологи, которые генерят идеи и проводят исследования.
+      Копирайтеры, редакторы, продактовые команды. Все, кто пишет тексты
+      в любом состоянии и формате.
+    </div>
+    <div class="kiosk pk">
+      <h5>▸ INFO-PARTNER</h5>
+      Спасибо <a href="https://t.me/cossaru" target="_blank" rel="noopener">Cossa</a> —
+      ребята, как всегда, на передовой диджитОла.
+    </div>
+  </section>
+
+  <div class="coinfoot">
+    <span class="blink">█</span> &nbsp; НЕЙРОМАСТЕРСКАЯ · ALL RIGHTS LEFT · © 2026 &nbsp; <span class="blink">█</span>
+  </div>
+
+</main>
+
+<!-- Tweaks panel -->
+<div id="tweaks">
+  <div class="head" id="tw-drag">
+    <span>▸ TWEAKS</span>
+    <button class="close" id="tw-close" title="Скрыть">×</button>
+  </div>
+  <div class="body">
+    <div class="row">
+      <div class="lbl"><span>ПОДСВЕТКА</span><span class="val" id="tw-glow-v">100%</span></div>
+      <input type="range" id="tw-glow" min="0" max="200" value="100">
+    </div>
+    <div class="row">
+      <div class="lbl"><span>ОЛДОВОСТЬ</span><span class="val" id="tw-retro-v">50%</span></div>
+      <input type="range" id="tw-retro" min="0" max="100" value="50">
+    </div>
+    <div class="row">
+      <div class="lbl"><span>СКОРОСТЬ ИГРЫ</span><span class="val" id="tw-speed-v">1.00×</span></div>
+      <input type="range" id="tw-speed" min="50" max="200" value="100">
+    </div>
+  </div>
+</div>
+
+<script>
+// =========================================================
+// EDITMODE TWEAKS
+// =========================================================
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "glow": 144,
+  "retro": 41,
+  "speed": 77
+}/*EDITMODE-END*/;
+
+function applyTweaks(t){
+  const root = document.documentElement.style;
+  // glow: 0..200 -> 0..2 multiplier, + subtle body brightness/saturation
+  const glow = (t.glow|0) / 100;
+  root.setProperty('--glow', glow.toFixed(3));
+  document.body.style.filter = `saturate(${(0.85 + glow*0.25).toFixed(3)}) brightness(${(0.9 + glow*0.15).toFixed(3)})`;
+
+  // retro: 0..100 -> scanline darkness, vignette, flicker, slight contrast
+  const r = (t.retro|0) / 100;
+  root.setProperty('--retro', r.toFixed(3));
+  root.setProperty('--scan', `rgba(0,0,0,${(r*0.45).toFixed(3)})`);
+  const overlay = document.querySelector('.crt-overlay');
+  if(overlay){
+    overlay.style.opacity = (0.3 + r*0.7).toFixed(3);
+    overlay.classList.toggle('flicker', r > 0.2);
+  }
+
+  // speed: 50..200 -> 0.5..2
+  const sp = (t.speed|0) / 100;
+  window.__gameSpeed = sp;
+}
+applyTweaks(TWEAK_DEFAULTS);
+// reflect on sliders
+document.getElementById('tw-glow').value = TWEAK_DEFAULTS.glow;
+document.getElementById('tw-glow-v').textContent = TWEAK_DEFAULTS.glow + '%';
+document.getElementById('tw-retro').value = TWEAK_DEFAULTS.retro;
+document.getElementById('tw-retro-v').textContent = TWEAK_DEFAULTS.retro + '%';
+document.getElementById('tw-speed').value = TWEAK_DEFAULTS.speed;
+document.getElementById('tw-speed-v').textContent = (TWEAK_DEFAULTS.speed/100).toFixed(2) + '×';
+
+let editModeActive = false;
+window.addEventListener('message', e=>{
+  const d = e.data || {};
+  if(d.type === '__activate_edit_mode'){ editModeActive=true; document.getElementById('tweaks').classList.add('show'); }
+  if(d.type === '__deactivate_edit_mode'){ editModeActive=false; document.getElementById('tweaks').classList.remove('show'); }
+});
+window.parent.postMessage({type:'__edit_mode_available'}, '*');
+function sendEdit(edits){
+  window.parent.postMessage({type:'__edit_mode_set_keys', edits}, '*');
+}
+document.getElementById('tw-glow').addEventListener('input', e=>{
+  TWEAK_DEFAULTS.glow = +e.target.value;
+  document.getElementById('tw-glow-v').textContent = e.target.value + '%';
+  applyTweaks(TWEAK_DEFAULTS); sendEdit({glow: +e.target.value});
+});
+document.getElementById('tw-retro').addEventListener('input', e=>{
+  TWEAK_DEFAULTS.retro = +e.target.value;
+  document.getElementById('tw-retro-v').textContent = e.target.value + '%';
+  applyTweaks(TWEAK_DEFAULTS); sendEdit({retro: +e.target.value});
+});
+document.getElementById('tw-speed').addEventListener('input', e=>{
+  TWEAK_DEFAULTS.speed = +e.target.value;
+  document.getElementById('tw-speed-v').textContent = (+e.target.value/100).toFixed(2) + '×';
+  applyTweaks(TWEAK_DEFAULTS); sendEdit({speed: +e.target.value});
+});
+
+// Close button — hide until the host re-activates
+document.getElementById('tw-close').addEventListener('click', ()=>{
+  document.getElementById('tweaks').classList.remove('show');
+});
+
+// Drag the panel by its head
+(function(){
+  const panel = document.getElementById('tweaks');
+  const head  = document.getElementById('tw-drag');
+  let sx=0, sy=0, ox=0, oy=0, dragging=false;
+  head.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    const r = panel.getBoundingClientRect();
+    // switch to left/top positioning so drag is simple
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.left = r.left + 'px';
+    panel.style.top  = r.top + 'px';
+    sx = e.clientX; sy = e.clientY;
+    ox = r.left; oy = r.top;
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    let nx = ox + (e.clientX - sx);
+    let ny = oy + (e.clientY - sy);
+    // clamp to viewport
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    nx = Math.max(4, Math.min(vw - pw - 4, nx));
+    ny = Math.max(4, Math.min(vh - ph - 4, ny));
+    panel.style.left = nx + 'px';
+    panel.style.top  = ny + 'px';
+  });
+  head.addEventListener('pointerup',   ()=> dragging = false);
+  head.addEventListener('pointercancel',()=> dragging = false);
+})();
+</script>
+<script src="game.js?v=7"></script>
+
+</body>
+</html>
